@@ -5,11 +5,13 @@ import { useAuth } from '@/contexts/AuthContext';
 import Link from 'next/link';
 import styles from '@/styles/Login-Register.module.css';
 
-export default function LoginPage() {
-  const { login } = useAuth();
+export default function RegisterPage() {
+  const { register } = useAuth();
   const [formData, setFormData] = useState({
+    nombreCompleto: '',
     email: '',
-    password: ''
+    password: '',
+    confirmPassword: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -17,12 +19,29 @@ export default function LoginPage() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+
+    // Validar que las contraseñas coincidan
+    if (formData.password !== formData.confirmPassword) {
+      setError('Las contraseñas no coinciden');
+      return;
+    }
+
+    // Validar longitud de contraseña
+    if (formData.password.length < 6) {
+      setError('La contraseña debe tener al menos 6 caracteres');
+      return;
+    }
+
     setLoading(true);
 
     try {
-      await login(formData);
+      await register({
+        nombreCompleto: formData.nombreCompleto,
+        email: formData.email,
+        password: formData.password
+      });
     } catch (err: any) {
-      setError(err.message || 'Email o contraseña incorrectos');
+      setError(err.message || 'Error al crear la cuenta');
     } finally {
       setLoading(false);
     }
@@ -47,34 +66,34 @@ export default function LoginPage() {
           </div>
           <h1 className={styles.brandName}>Sistema de Gestión</h1>
           <p className={styles.brandSubtitle}>Control Integral de Inventario</p>
-          <p className={styles.brandDescription}>Plataforma completa para la administración</p>
+          <p className={styles.brandDescription}>Únete a nuestra plataforma</p>
         </div>
 
         <div className={styles.features}>
           <div className={styles.feature}>
             <div className={styles.checkmark}>✓</div>
-            <span>Gestión de productos y categorías</span>
+            <span>Acceso completo a todas las funcionalidades</span>
           </div>
           <div className={styles.feature}>
             <div className={styles.checkmark}>✓</div>
-            <span>Control de inventario en tiempo real</span>
+            <span>Interfaz intuitiva y fácil de usar</span>
           </div>
           <div className={styles.feature}>
             <div className={styles.checkmark}>✓</div>
-            <span>Sistema de autenticación seguro</span>
+            <span>Soporte técnico disponible 24/7</span>
           </div>
           <div className={styles.feature}>
             <div className={styles.checkmark}>✓</div>
-            <span>Reportes y análisis detallados</span>
+            <span>Actualizaciones constantes del sistema</span>
           </div>
         </div>
       </div>
 
       <div className={styles.rightSection}>
         <div className={styles.formCard}>
-          <h2 className={styles.formTitle}>Iniciar Sesión</h2>
+          <h2 className={styles.formTitle}>Crear Cuenta</h2>
           <p className={styles.formSubtitle}>
-            Ingresa tus credenciales para acceder al sistema
+            Completa el formulario para registrarte
           </p>
 
           <form onSubmit={handleSubmit} className={styles.form}>
@@ -85,8 +104,8 @@ export default function LoginPage() {
             )}
 
             <div className={styles.inputGroup}>
-              <label htmlFor="email" className={styles.label}>
-                Email
+              <label htmlFor="nombreCompleto" className={styles.label}>
+                Nombre Completo
               </label>
               <div className={styles.inputWrapper}>
                 <span className={styles.inputIcon}>
@@ -96,12 +115,36 @@ export default function LoginPage() {
                   </svg>
                 </span>
                 <input
+                  id="nombreCompleto"
+                  type="text"
+                  name="nombreCompleto"
+                  value={formData.nombreCompleto}
+                  onChange={handleChange}
+                  placeholder="Ingresa tu nombre completo"
+                  className={styles.input}
+                  required
+                />
+              </div>
+            </div>
+
+            <div className={styles.inputGroup}>
+              <label htmlFor="email" className={styles.label}>
+                Email
+              </label>
+              <div className={styles.inputWrapper}>
+                <span className={styles.inputIcon}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z" />
+                    <polyline points="22,6 12,13 2,6" />
+                  </svg>
+                </span>
+                <input
                   id="email"
                   type="email"
                   name="email"
                   value={formData.email}
                   onChange={handleChange}
-                  placeholder="Ingresa tu email"
+                  placeholder="tu@email.com"
                   className={styles.input}
                   required
                 />
@@ -125,7 +168,32 @@ export default function LoginPage() {
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Ingresa tu contraseña"
+                  placeholder="Mínimo 6 caracteres"
+                  className={styles.input}
+                  required
+                  minLength={6}
+                />
+              </div>
+            </div>
+
+            <div className={styles.inputGroup}>
+              <label htmlFor="confirmPassword" className={styles.label}>
+                Confirmar Contraseña
+              </label>
+              <div className={styles.inputWrapper}>
+                <span className={styles.inputIcon}>
+                  <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
+                    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+                  </svg>
+                </span>
+                <input
+                  id="confirmPassword"
+                  type="password"
+                  name="confirmPassword"
+                  value={formData.confirmPassword}
+                  onChange={handleChange}
+                  placeholder="Repite tu contraseña"
                   className={styles.input}
                   required
                 />
@@ -137,15 +205,15 @@ export default function LoginPage() {
               className={styles.submitButton}
               disabled={loading}
             >
-              {loading ? 'Ingresando...' : 'Ingresar al Sistema'}
+              {loading ? 'Creando cuenta...' : 'Crear Cuenta'}
             </button>
           </form>
 
           <div className={styles.footer}>
             <p>
-              ¿No tienes cuenta?{' '}
-              <Link href="/register" className={styles.link}>
-                Regístrate aquí
+              ¿Ya tienes cuenta?{' '}
+              <Link href="/login" className={styles.link}>
+                Inicia sesión aquí
               </Link>
             </p>
           </div>
