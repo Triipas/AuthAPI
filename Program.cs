@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
 using System.Text;
+using Amazon.S3;
+using Amazon.Runtime;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -13,7 +15,20 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<ApplicationDbContext>(options =>
     options.UseSqlite(builder.Configuration.GetConnectionString("DefaultConnection")));
 
-// 2. Configurar Identity
+// 2. Configurar AWS S3
+var awsOptions = new Amazon.Extensions.NETCore.Setup.AWSOptions
+{
+    Credentials = new BasicAWSCredentials(
+        builder.Configuration["AWS:AccessKey"],
+        builder.Configuration["AWS:SecretKey"]
+    ),
+    Region = Amazon.RegionEndpoint.GetBySystemName(builder.Configuration["AWS:Region"])
+};
+builder.Services.AddDefaultAWSOptions(awsOptions);
+builder.Services.AddAWSService<IAmazonS3>();
+builder.Services.AddScoped<IS3Service, S3Service>();
+
+// 3. Configurar Identity
 builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
 {
     // Configuración de contraseñas
@@ -26,7 +41,7 @@ builder.Services.AddIdentity<Usuario, IdentityRole>(options =>
 .AddEntityFrameworkStores<ApplicationDbContext>()
 .AddDefaultTokenProviders();
 
-// 3. Configurar JWT Authentication
+// 4. Configurar JWT Authentication
 builder.Services.AddAuthentication(options =>
 {
     options.DefaultAuthenticateScheme = JwtBearerDefaults.AuthenticationScheme;
@@ -47,12 +62,13 @@ builder.Services.AddAuthentication(options =>
     };
 });
 
-// 4. Registrar servicios
+// 5. Registrar servicios
 builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
+builder.Services.AddScoped<IPerfilService, PerfilService>();
 
-// 5. Configurar CORS para Next.js
+// 6. Configurar CORS para Next.js
 builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowNextJS", policy =>
@@ -69,11 +85,15 @@ builder.Services.AddSwaggerGen();
 
 var app = builder.Build();
 
-// 6. Crear roles por defecto
+// 7. Crear roles y usuario admin por defecto
 using (var scope = app.Services.CreateScope())
 {
     var roleManager = scope.ServiceProvider.GetRequiredService<RoleManager<IdentityRole>>();
     var userManager = scope.ServiceProvider.GetRequiredService<UserManager<Usuario>>();
+    var db = scope.ServiceProvider.GetRequiredService<ApplicationDbContext>();
+    
+    // Aplicar migraciones automáticamente
+    db.Database.Migrate();
     
     if (!await roleManager.RoleExistsAsync("Admin"))
     {
@@ -90,7 +110,12 @@ using (var scope = app.Services.CreateScope())
     
     if (adminUser == null)
     {
-        adminUser = new Usuario {NombreCompleto = "Admin_Suelo", UserName = "admin", Email = adminEmail };
+        adminUser = new Usuario 
+        { 
+            NombreCompleto = "Admin Sistema", 
+            UserName = "admin", 
+            Email = adminEmail 
+        };
         await userManager.CreateAsync(adminUser, "Admin123!");
         await userManager.AddToRoleAsync(adminUser, "Admin");
     }

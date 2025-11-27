@@ -86,4 +86,39 @@ namespace AuthAPI.DTOs
         public bool TieneBajoStock => Stock < 10;
         public bool SinStock => Stock == 0;
     }
+
+    public class ProductoFiltrosDTO : PaginacionParams
+    {
+        // Búsqueda por texto
+        public string? SearchTerm { get; set; }
+        
+        // Filtro por categoría
+        public int? CategoriaId { get; set; }
+        
+        // Filtro por rango de precio
+        public decimal? PrecioMin { get; set; }
+        public decimal? PrecioMax { get; set; }
+        
+        // Filtro por disponibilidad
+        public bool? Disponible { get; set; }
+        
+        // Ordenamiento
+        public string OrderBy { get; set; } = "nombre"; // nombre, precio, fecha
+        public bool Descending { get; set; } = false;
+    }
+
+    // DTO para subir imagen de producto
+    public class ProductoImagenDTO
+    {
+        [Required]
+        public IFormFile Archivo { get; set; } = null!;
+    }
+    
+    // DTO para múltiples imágenes
+    public class ProductoImagenesDTO
+    {
+        [Required]
+        public List<IFormFile> Archivos { get; set; } = new();
+    }
+
 }

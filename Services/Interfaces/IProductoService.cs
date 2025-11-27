@@ -12,5 +12,10 @@ namespace AuthAPI.Services
         Task<bool> DeleteAsync(int id);
         Task<IEnumerable<ProductoResponseDTO>> GetByCategoria(int categoriaId);
         Task<IEnumerable<ProductoResponseDTO>> GetBajoStockAsync();
+        Task<string?> SubirImagenAsync(int productoId, IFormFile archivo);
+        Task<bool> EliminarImagenAsync(int productoId);
+        Task<ProductoResponseDTO> CreateConImagenAsync(ProductoCreateFormDTO dto);
+        Task<ProductoResponseDTO?> UpdateConImagenAsync(int id, ProductoUpdateFormDTO dto);
+
     }
 }

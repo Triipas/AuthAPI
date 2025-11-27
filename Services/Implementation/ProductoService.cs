@@ -8,10 +8,12 @@ namespace AuthAPI.Services
     public class ProductoService : IProductoService
     {
         private readonly ApplicationDbContext _context;
+        private readonly IS3Service _s3Service;
 
-        public ProductoService(ApplicationDbContext context)
+        public ProductoService(ApplicationDbContext context, IS3Service s3Service)
         {
             _context = context;
+            _s3Service = s3Service;
         }
 
         public async Task<PaginatedResponse<ProductoResponseDTO>> GetAllAsync(ProductoFiltrosDTO filtros)
@@ -25,7 +27,7 @@ namespace AuthAPI.Services
             if (!string.IsNullOrWhiteSpace(filtros.SearchTerm))
             {
                 var searchTerm = filtros.SearchTerm.ToLower();
-                query = query.Where(p => 
+                query = query.Where(p =>
                     p.Nombre.ToLower().Contains(searchTerm) ||
                     (p.Descripcion != null && p.Descripcion.ToLower().Contains(searchTerm))
                 );
@@ -57,7 +59,7 @@ namespace AuthAPI.Services
             // 6. Aplicar ordenamiento
             query = filtros.OrderBy.ToLower() switch
             {
-                "precio" => filtros.Descending 
+                "precio" => filtros.Descending
                     ? query.OrderByDescending(p => p.Precio)
                     : query.OrderBy(p => p.Precio),
                 "fecha" => filtros.Descending
@@ -229,14 +231,136 @@ namespace AuthAPI.Services
             };
         }
 
+        public async Task<ProductoResponseDTO> CreateConImagenAsync(ProductoCreateFormDTO dto)
+        {
+            // Validar que la categoría existe
+            var categoriaExists = await _context.Categorias.AnyAsync(c => c.Id == dto.CategoriaId);
+            if (!categoriaExists)
+            {
+                throw new ArgumentException("La categoría especificada no existe");
+            }
+
+            string? imagenUrl = null;
+            
+            // Subir imagen a S3 si se proporcionó
+            if (dto.Imagen != null)
+            {
+                imagenUrl = await _s3Service.SubirArchivoAsync(dto.Imagen, "productos");
+            }
+
+            // Crear producto
+            var producto = new Producto
+            {
+                Nombre = dto.Nombre,
+                Descripcion = dto.Descripcion,
+                Precio = dto.Precio,
+                Stock = dto.Stock,
+                ImagenUrl = imagenUrl,
+                CategoriaId = dto.CategoriaId
+            };
+
+            _context.Productos.Add(producto);
+            await _context.SaveChangesAsync();
+
+            // Cargar la categoría para la respuesta
+            await _context.Entry(producto)
+                .Reference(p => p.Categoria)
+                .LoadAsync();
+
+            return new ProductoResponseDTO
+            {
+                Id = producto.Id,
+                Nombre = producto.Nombre,
+                Descripcion = producto.Descripcion,
+                Precio = producto.Precio,
+                Stock = producto.Stock,
+                ImagenUrl = producto.ImagenUrl,
+                Disponible = producto.Disponible,
+                FechaCreacion = producto.FechaCreacion,
+                CategoriaId = producto.CategoriaId,
+                CategoriaNombre = producto.Categoria.Nombre
+            };
+        }
+
+        public async Task<ProductoResponseDTO?> UpdateConImagenAsync(int id, ProductoUpdateFormDTO dto)
+        {
+            var producto = await _context.Productos
+                .Include(p => p.Categoria)
+                .FirstOrDefaultAsync(p => p.Id == id);
+
+            if (producto == null) return null;
+
+            // Validar que la nueva categoría existe (si cambió)
+            if (producto.CategoriaId != dto.CategoriaId)
+            {
+                var categoriaExists = await _context.Categorias.AnyAsync(c => c.Id == dto.CategoriaId);
+                if (!categoriaExists)
+                {
+                    throw new ArgumentException("La categoría especificada no existe");
+                }
+            }
+
+            // Manejar la imagen
+            if (dto.EliminarImagenActual && !string.IsNullOrEmpty(producto.ImagenUrl))
+            {
+                // Eliminar imagen actual
+                await _s3Service.EliminarArchivoAsync(producto.ImagenUrl);
+                producto.ImagenUrl = null;
+            }
+            
+            if (dto.Imagen != null)
+            {
+                // Eliminar imagen anterior si existe
+                if (!string.IsNullOrEmpty(producto.ImagenUrl))
+                {
+                    await _s3Service.EliminarArchivoAsync(producto.ImagenUrl);
+                }
+                
+                // Subir nueva imagen
+                producto.ImagenUrl = await _s3Service.SubirArchivoAsync(dto.Imagen, "productos");
+            }
+
+            // Actualizar propiedades
+            producto.Nombre = dto.Nombre;
+            producto.Descripcion = dto.Descripcion;
+            producto.Precio = dto.Precio;
+            producto.Stock = dto.Stock;
+            producto.Disponible = dto.Disponible;
+            producto.CategoriaId = dto.CategoriaId;
+
+            await _context.SaveChangesAsync();
+
+            // Recargar categoría si cambió
+            if (producto.CategoriaId != dto.CategoriaId)
+            {
+                await _context.Entry(producto)
+                    .Reference(p => p.Categoria)
+                    .LoadAsync();
+            }
+
+            return new ProductoResponseDTO
+            {
+                Id = producto.Id,
+                Nombre = producto.Nombre,
+                Descripcion = producto.Descripcion,
+                Precio = producto.Precio,
+                Stock = producto.Stock,
+                ImagenUrl = producto.ImagenUrl,
+                Disponible = producto.Disponible,
+                FechaCreacion = producto.FechaCreacion,
+                CategoriaId = producto.CategoriaId,
+                CategoriaNombre = producto.Categoria.Nombre
+            };
+        }
+
         public async Task<bool> UpdateStockAsync(int id, ProductoStockUpdateDTO dto)
         {
             var producto = await _context.Productos.FindAsync(id);
-            
+
             if (producto == null) return false;
 
             producto.Stock = dto.Stock;
-            
+
             // Si el stock llega a 0, marcar como no disponible
             if (dto.Stock == 0)
             {
@@ -250,7 +374,7 @@ namespace AuthAPI.Services
         public async Task<bool> DeleteAsync(int id)
         {
             var producto = await _context.Productos.FindAsync(id);
-            
+
             if (producto == null) return false;
 
             _context.Productos.Remove(producto);
@@ -304,5 +428,50 @@ namespace AuthAPI.Services
 
             return productos;
         }
+
+        public async Task<string?> SubirImagenAsync(int productoId, IFormFile archivo)
+        {
+            var producto = await _context.Productos.FindAsync(productoId);
+            if (producto == null) return null;
+
+            try
+            {
+                // Eliminar imagen anterior si existe
+                if (!string.IsNullOrEmpty(producto.ImagenUrl))
+                {
+                    await _s3Service.EliminarArchivoAsync(producto.ImagenUrl);
+                }
+
+                // Subir nueva imagen a S3
+                var urlImagen = await _s3Service.SubirArchivoAsync(archivo, "productos");
+
+                // Actualizar producto
+                producto.ImagenUrl = urlImagen;
+                await _context.SaveChangesAsync();
+
+                return urlImagen;
+            }
+            catch (Exception)
+            {
+                throw;
+            }
+        }
+
+        public async Task<bool> EliminarImagenAsync(int productoId)
+        {
+            var producto = await _context.Productos.FindAsync(productoId);
+            if (producto == null || string.IsNullOrEmpty(producto.ImagenUrl))
+                return false;
+
+            // Eliminar de S3
+            await _s3Service.EliminarArchivoAsync(producto.ImagenUrl);
+
+            // Actualizar producto
+            producto.ImagenUrl = null;
+            await _context.SaveChangesAsync();
+
+            return true;
+        }
+
     }
 }

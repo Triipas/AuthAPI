@@ -7,7 +7,7 @@ namespace AuthAPI.Controllers
 {
     [Route("api/[controller]")]
     [ApiController]
-    [Authorize] // Requiere autenticación
+    [Authorize]
     public class ProductosController : ControllerBase
     {
         private readonly IProductoService _productoService;
@@ -137,5 +137,120 @@ namespace AuthAPI.Controllers
 
             return NoContent(); // 204 No Content
         }
+
+        /// POST /api/productos/5/imagen
+        [HttpPost("{id}/imagen")]
+        [Authorize(Roles = "Admin")]
+        [RequestSizeLimit(5 * 1024 * 1024)] // 5MB
+        public async Task<IActionResult> SubirImagen(int id, IFormFile archivo)
+        {
+            if (archivo == null || archivo.Length == 0)
+            {
+                return BadRequest(new { message = "No se proporcionó ningún archivo" });
+            }
+
+            try
+            {
+                var urlImagen = await _productoService.SubirImagenAsync(id, archivo);
+                
+                if (urlImagen == null)
+                {
+                    return NotFound(new { message = "Producto no encontrado" });
+                }
+                
+                return Ok(new 
+                { 
+                    message = "Imagen subida exitosamente", 
+                    url = urlImagen 
+                });
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error al subir la imagen", error = ex.Message });
+            }
+        }
+        
+        /// DELETE /api/productos/5/imagen
+        [HttpDelete("{id}/imagen")]
+        [Authorize(Roles = "Admin")]
+        public async Task<IActionResult> EliminarImagen(int id)
+        {
+            var result = await _productoService.EliminarImagenAsync(id);
+            
+            if (!result)
+            {
+                return NotFound(new { message = "Producto no encontrado o no tiene imagen" });
+            }
+
+            return Ok(new { message = "Imagen eliminada exitosamente" });
+        }
+
+        /// POST /api/productos/con-imagen
+        [HttpPost("con-imagen")]
+        [Authorize(Roles = "Admin")]
+        [RequestSizeLimit(5 * 1024 * 1024)] // 5MB
+        public async Task<ActionResult<ProductoResponseDTO>> CreateConImagen([FromForm] ProductoCreateFormDTO dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var producto = await _productoService.CreateConImagenAsync(dto);
+                
+                return CreatedAtAction(
+                    nameof(GetById),
+                    new { id = producto.Id },
+                    producto
+                );
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error al crear el producto", error = ex.Message });
+            }
+        }
+
+        /// PUT /api/productos/5/con-imagen
+        [HttpPut("{id}/con-imagen")]
+        [Authorize(Roles = "Admin")]
+        [RequestSizeLimit(5 * 1024 * 1024)] // 5MB
+        public async Task<ActionResult<ProductoResponseDTO>> UpdateConImagen(int id, [FromForm] ProductoUpdateFormDTO dto)
+        {
+            if (!ModelState.IsValid)
+            {
+                return BadRequest(ModelState);
+            }
+
+            try
+            {
+                var producto = await _productoService.UpdateConImagenAsync(id, dto);
+                
+                if (producto == null)
+                {
+                    return NotFound(new { message = "Producto no encontrado" });
+                }
+
+                return Ok(producto);
+            }
+            catch (ArgumentException ex)
+            {
+                return BadRequest(new { message = ex.Message });
+            }
+            catch (Exception ex)
+            {
+                return StatusCode(500, new { message = "Error al actualizar el producto", error = ex.Message });
+            }
+        }
+
     }
 }
