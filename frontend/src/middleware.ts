@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-export function proxy(request: NextRequest) {
+export function middleware(request: NextRequest) {
     const { pathname } = request.nextUrl;
 
     // Rutas completamente públicas
     const publicRoutes = ['/login', '/register'];
     const isPublicRoute = publicRoutes.includes(pathname);
 
-    // Rutas excluidas del proxy (para testing/desarrollo)
+    // Rutas excluidas del middleware (para testing/desarrollo)
     const excludedRoutes = ['/test', '/demo', '/playground'];
     const isExcludedRoute = excludedRoutes.some(route => pathname.startsWith(route));
     
