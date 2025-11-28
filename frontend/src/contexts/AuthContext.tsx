@@ -35,13 +35,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await api.login(data);
       const userData: Usuario = {
-        Id: '', // El backend no devuelve el ID en el login, lo obtendrías del perfil
+        Id: '',
         Email: response.Email,
         NombreCompleto: response.NombreCompleto,
         Roles: response.Roles
       };
       setUser(userData);
-      router.push('/dashboard');
+      
+      // 🔑 CRÍTICO: Esperar 100ms para que la cookie se establezca
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 🔑 Usar window.location.href para forzar reload completo
+      // Esto asegura que el middleware vea la cookie
+      window.location.href = '/dashboard';
+      
     } catch (error) {
       throw error;
     }
@@ -57,7 +64,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         Roles: response.Roles
       };
       setUser(userData);
-      router.push('/dashboard');
+      
+      // 🔑 CRÍTICO: Esperar 100ms para que la cookie se establezca
+      await new Promise(resolve => setTimeout(resolve, 100));
+      
+      // 🔑 Usar window.location.href para forzar reload completo
+      window.location.href = '/dashboard';
+      
     } catch (error) {
       throw error;
     }
@@ -67,7 +80,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     api.logout();
     setUser(null);
     
-    router.push('/login');
+    // También usar reload completo para logout
+    window.location.href = '/login';
   };
 
   const value = {

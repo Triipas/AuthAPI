@@ -26,9 +26,9 @@ class ApiService {
     };
 
     if (includeAuth) {
-      const Token = this.getToken();
-      if (Token) {
-        headers['Authorization'] = `Bearer ${Token}`;
+      const token = this.getToken();
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
       }
     }
 
@@ -37,39 +37,44 @@ class ApiService {
 
   private getToken(): string | null {
     if (typeof window !== 'undefined') {
-      // Primero intentar de cookie (más seguro)
-      const TokenFromCookie = cookies.get('Token');
-      if (TokenFromCookie) return TokenFromCookie;
+      // Primero intentar de cookie
+      const tokenFromCookie = cookies.get('token');
+      if (tokenFromCookie) {
+        console.log('[API] Token found in cookie');
+        return tokenFromCookie;
+      }
 
-      // Fallback a localStorage (por compatibilidad)
-      return localStorage.getItem('Token');
+      // Fallback a localStorage
+      const tokenFromStorage = localStorage.getItem('token');
+      if (tokenFromStorage) {
+        console.log('[API] Token found in localStorage');
+        return tokenFromStorage;
+      }
+      
+      console.log('[API] No token found');
     }
     return null;
   }
 
   async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
-      // Intentar obtener el error del servidor
       let errorMessage = 'Error en la petición';
       let errorDetails = null;
 
       try {
         const errorData = await response.json();
 
-        // El backend puede devolver diferentes formatos de error
         if (errorData.message) {
           errorMessage = errorData.message;
         } else if (errorData.title) {
           errorMessage = errorData.title;
         }
 
-        // ASP.NET Core validation errors
         if (errorData.errors) {
           errorDetails = errorData.errors;
           console.error('Validation errors:', errorData.errors);
         }
 
-        // Log completo del error para debugging
         console.error('API Error:', {
           status: response.status,
           statusText: response.statusText,
@@ -78,12 +83,10 @@ class ApiService {
         });
 
       } catch (parseError) {
-        // Si no se puede parsear el JSON, usar el status text
         errorMessage = `${response.status}: ${response.statusText}`;
         console.error('Could not parse error response:', parseError);
       }
 
-      // Crear objeto de error
       const error: ApiError = {
         Message: errorMessage,
         Errors: errorDetails
@@ -92,7 +95,6 @@ class ApiService {
       throw error;
     }
 
-    // Para respuestas 204 No Content
     if (response.status === 204) {
       return {} as T;
     }
@@ -100,8 +102,13 @@ class ApiService {
     return response.json();
   }
 
-  // Auth endpoints
+  // ============================================
+  // AUTH ENDPOINTS
+  // ============================================
+  
   async login(data: LoginDTO): Promise<AuthResponse> {
+    console.log('[API] 🔐 Attempting login for:', data.Email);
+    
     const response = await fetch(`${API_URL}/Auth/login`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -109,27 +116,47 @@ class ApiService {
     });
 
     const result = await this.handleResponse<AuthResponse>(response);
+    console.log('[API] ✅ Login response received:', {
+      email: result.Email,
+      roles: result.Roles,
+      hasToken: !!result.Token,
+      tokenPreview: result.Token ? result.Token.substring(0, 20) + '...' : 'NO TOKEN'
+    });
 
-    // Guardar Token en COOKIE (para middleware) y localStorage (backup)
     if (result.Token) {
-      // Cookie (expira en 1 día, igual que el Token JWT)
-      cookies.set('Token', result.Token, 1);
-
-      // LocalStorage (backup para código legacy)
-      localStorage.setItem('Token', result.Token);
-
-      // Guardar info del usuario solo en localStorage (no sensible)
-      localStorage.setItem('user', JSON.stringify({
+      console.log('[API] 💾 Saving token to cookie and localStorage...');
+      
+      // 1. Cookie (principal)
+      cookies.set('token', result.Token, 1);
+      console.log('[API] ✅ Token saved to cookie');
+      
+      // 2. LocalStorage (backup)
+      localStorage.setItem('token', result.Token);
+      console.log('[API] ✅ Token saved to localStorage');
+      
+      // 3. User info
+      const userInfo = {
         email: result.Email,
         nombreCompleto: result.NombreCompleto,
         roles: result.Roles
-      }));
+      };
+      localStorage.setItem('user', JSON.stringify(userInfo));
+      console.log('[API] ✅ User info saved:', userInfo);
+      
+      // 4. Verificar que se guardó correctamente
+      const verification = cookies.get('token');
+      console.log('[API] 🔍 Verification - Cookie exists:', !!verification);
+      
+    } else {
+      console.error('[API] ❌ No token in response!');
     }
 
     return result;
   }
 
   async register(data: RegisterDTO): Promise<AuthResponse> {
+    console.log('[API] 🔐 Attempting registration for:', data.Email);
+    
     const response = await fetch(`${API_URL}/Auth/register`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -137,39 +164,58 @@ class ApiService {
     });
 
     const result = await this.handleResponse<AuthResponse>(response);
+    console.log('[API] ✅ Registration response received:', {
+      email: result.Email,
+      roles: result.Roles,
+      hasToken: !!result.Token
+    });
 
-    // Guardar Token en COOKIE y localStorage
     if (result.Token) {
-      // Cookie (expira en 1 día)
-      cookies.set('Token', result.Token, 1);
-
-      // LocalStorage (backup)
-      localStorage.setItem('Token', result.Token);
-
-      // Info del usuario
-      localStorage.setItem('user', JSON.stringify({
+      console.log('[API] 💾 Saving token to cookie and localStorage...');
+      
+      // Cookie
+      cookies.set('token', result.Token, 1);
+      console.log('[API] ✅ Token saved to cookie');
+      
+      // LocalStorage
+      localStorage.setItem('token', result.Token);
+      console.log('[API] ✅ Token saved to localStorage');
+      
+      // User info
+      const userInfo = {
         email: result.Email,
         nombreCompleto: result.NombreCompleto,
         roles: result.Roles
-      }));
+      };
+      localStorage.setItem('user', JSON.stringify(userInfo));
+      console.log('[API] ✅ User info saved');
+      
+      // Verificación
+      const verification = cookies.get('token');
+      console.log('[API] 🔍 Verification - Cookie exists:', !!verification);
+    } else {
+      console.error('[API] ❌ No token in response!');
     }
 
     return result;
   }
 
   logout() {
+    console.log('[API] 🚪 Logging out...');
+    
     if (typeof window !== 'undefined') {
-      // Eliminar cookie
-      cookies.remove('Token');
-
-      // Eliminar localStorage
-      localStorage.removeItem('Token');
+      cookies.remove('token');
+      localStorage.removeItem('token');
       localStorage.removeItem('user');
+      
+      console.log('[API] ✅ Logout complete');
     }
   }
 
   isAuthenticated(): boolean {
-    return !!this.getToken();
+    const hasToken = !!this.getToken();
+    console.log('[API] 🔍 Is authenticated:', hasToken);
+    return hasToken;
   }
 
   getCurrentUser() {
@@ -180,7 +226,10 @@ class ApiService {
     return null;
   }
 
-  // Productos endpoints
+  // ============================================
+  // PRODUCTOS ENDPOINTS
+  // ============================================
+  
   async getProductos(params?: any): Promise<PaginatedResponse<Producto>> {
     const queryString = params ? `?${new URLSearchParams(params)}` : '';
     const response = await fetch(`${API_URL}/Productos${queryString}`, {
@@ -196,7 +245,10 @@ class ApiService {
     return this.handleResponse<Producto[]>(response);
   }
 
-  // Categorías endpoints
+  // ============================================
+  // CATEGORÍAS ENDPOINTS
+  // ============================================
+  
   async getCategorias(): Promise<Categoria[]> {
     const response = await fetch(`${API_URL}/Categorias`, {
       headers: this.getHeaders(true),
@@ -204,7 +256,10 @@ class ApiService {
     return this.handleResponse<Categoria[]>(response);
   }
 
-  // Obtener perfil completo del usuario autenticado
+  // ============================================
+  // PERFIL ENDPOINTS
+  // ============================================
+  
   async obtenerPerfil(): Promise<PerfilResponseDTO> {
     const response = await fetch(`${API_URL}/Perfil`, {
       headers: this.getHeaders(true),
@@ -212,7 +267,6 @@ class ApiService {
     return this.handleResponse<PerfilResponseDTO>(response);
   }
 
-  // Actualizar información básica del perfil
   async actualizarPerfil(data: ActualizarPerfilDTO): Promise<PerfilResponseDTO> {
     const response = await fetch(`${API_URL}/Perfil`, {
       method: 'PUT',
@@ -222,7 +276,6 @@ class ApiService {
     return this.handleResponse<PerfilResponseDTO>(response);
   }
 
-  // Actualizar configuración de apariencia
   async actualizarApariencia(data: ConfiguracionAparienciaDTO): Promise<void> {
     const response = await fetch(`${API_URL}/Perfil/apariencia`, {
       method: 'PUT',
@@ -232,7 +285,6 @@ class ApiService {
     return this.handleResponse<void>(response);
   }
 
-  // Actualizar configuración de idioma
   async actualizarIdioma(data: ConfiguracionIdiomaDTO): Promise<void> {
     const response = await fetch(`${API_URL}/Perfil/idioma`, {
       method: 'PUT',
@@ -242,7 +294,6 @@ class ApiService {
     return this.handleResponse<void>(response);
   }
 
-  // Actualizar configuración de notificaciones
   async actualizarNotificaciones(data: ConfiguracionNotificacionesDTO): Promise<void> {
     const response = await fetch(`${API_URL}/Perfil/notificaciones`, {
       method: 'PUT',
@@ -252,7 +303,6 @@ class ApiService {
     return this.handleResponse<void>(response);
   }
 
-  // Actualizar configuración de privacidad
   async actualizarPrivacidad(data: ConfiguracionPrivacidadDTO): Promise<void> {
     const response = await fetch(`${API_URL}/Perfil/privacidad`, {
       method: 'PUT',
@@ -262,7 +312,6 @@ class ApiService {
     return this.handleResponse<void>(response);
   }
 
-  // Actualizar configuración de accesibilidad
   async actualizarAccesibilidad(data: ConfiguracionAccesibilidadDTO): Promise<void> {
     const response = await fetch(`${API_URL}/Perfil/accesibilidad`, {
       method: 'PUT',
@@ -272,7 +321,6 @@ class ApiService {
     return this.handleResponse<void>(response);
   }
 
-  // Subir foto de perfil
   async subirFotoPerfil(archivo: File): Promise<{ url: string }> {
     const formData = new FormData();
     formData.append('archivo', archivo);
@@ -287,7 +335,6 @@ class ApiService {
     return this.handleResponse<{ url: string }>(response);
   }
 
-  // Eliminar foto de perfil
   async eliminarFotoPerfil(): Promise<void> {
     const response = await fetch(`${API_URL}/Perfil/foto`, {
       method: 'DELETE',
@@ -296,7 +343,6 @@ class ApiService {
     return this.handleResponse<void>(response);
   }
 
-  // Cambiar contraseña
   async cambiarPassword(data: CambiarPasswordDTO): Promise<void> {
     const response = await fetch(`${API_URL}/Perfil/cambiar-password`, {
       method: 'POST',
@@ -306,7 +352,6 @@ class ApiService {
     return this.handleResponse<void>(response);
   }
 
-  // Solicitar Token para restablecer contraseña
   async solicitarRestablecerPassword(email: string): Promise<{ message: string; Token?: string }> {
     const response = await fetch(`${API_URL}/Perfil/restablecer-password-request`, {
       method: 'POST',
@@ -316,7 +361,6 @@ class ApiService {
     return this.handleResponse<{ message: string; Token?: string }>(response);
   }
 
-  // Restablecer contraseña con Token
   async restablecerPassword(data: { Email: string; Token: string; NuevaPassword: string }): Promise<void> {
     const response = await fetch(`${API_URL}/Perfil/restablecer-password`, {
       method: 'POST',
@@ -326,4 +370,5 @@ class ApiService {
     return this.handleResponse<void>(response);
   }
 }
-  export const api = new ApiService();
+
+export const api = new ApiService();
