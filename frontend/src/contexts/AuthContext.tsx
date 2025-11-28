@@ -35,10 +35,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await api.login(data);
       const userData: Usuario = {
-        id: '', // El backend no devuelve el ID en el login, lo obtendrías del perfil
-        email: response.email,
-        nombreCompleto: response.nombreCompleto,
-        roles: response.roles
+        Id: '', // El backend no devuelve el ID en el login, lo obtendrías del perfil
+        Email: response.Email,
+        NombreCompleto: response.NombreCompleto,
+        Roles: response.Roles
       };
       setUser(userData);
       router.push('/dashboard');
@@ -51,10 +51,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await api.register(data);
       const userData: Usuario = {
-        id: '',
-        email: response.email,
-        nombreCompleto: response.nombreCompleto,
-        roles: response.roles
+        Id: '',
+        Email: response.Email,
+        NombreCompleto: response.NombreCompleto,
+        Roles: response.Roles
       };
       setUser(userData);
       router.push('/dashboard');
@@ -66,6 +66,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     api.logout();
     setUser(null);
+    
     router.push('/login');
   };
 
@@ -76,7 +77,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     register,
     logout,
     isAuthenticated: !!user,
-    isAdmin: user?.roles?.includes('Admin') ?? false,
+    isAdmin: user?.Roles?.includes('Admin') ?? false,
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

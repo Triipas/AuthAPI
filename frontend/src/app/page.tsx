@@ -8,10 +8,10 @@ export default function HomePage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Verificar si hay token
-    const token = localStorage.getItem('token');
+    // Verificar si hay Token
+    const Token = localStorage.getItem('Token');
     
-    if (token) {
+    if (Token) {
       router.push('/dashboard');
     } else {
       router.push('/login');

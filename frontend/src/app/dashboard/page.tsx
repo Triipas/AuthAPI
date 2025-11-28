@@ -2,12 +2,29 @@
 
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'next/navigation';
-import { useEffect } from 'react';
+import { useEffect, useState } from 'react';
+import { api } from '@/services/api';
+import { Producto, Categoria, PaginatedResponse } from '@/types';
 import styles from '@/styles/dashboard.module.css';
+
+interface DashboardStats {
+  totalProductos: number;
+  totalCategorias: number;
+  productosBajoStock: number;
+  loading: boolean;
+  error: string | null;
+}
 
 export default function DashboardPage() {
   const { user, logout, isAuthenticated, loading } = useAuth();
   const router = useRouter();
+  const [stats, setStats] = useState<DashboardStats>({
+    totalProductos: 0,
+    totalCategorias: 0,
+    productosBajoStock: 0,
+    loading: true,
+    error: null
+  });
 
   useEffect(() => {
     // Si no está autenticado después de cargar, redirigir a login
@@ -15,6 +32,43 @@ export default function DashboardPage() {
       router.push('/login');
     }
   }, [isAuthenticated, loading, router]);
+
+  useEffect(() => {
+    // Cargar estadísticas solo si está autenticado
+    if (isAuthenticated) {
+      loadStats();
+    }
+  }, [isAuthenticated]);
+
+  const loadStats = async () => {
+    try {
+      setStats(prev => ({ ...prev, loading: true, error: null }));
+
+      // Llamadas paralelas para obtener todos los datos (ahora con tipado correcto)
+      const [productosResponse, categoriasResponse, bajoStockResponse] = await Promise.all([
+        api.getProductos({ pageSize: 1 }), // Devuelve PaginatedResponse<Producto>
+        api.getCategorias(), // Devuelve Categoria[]
+        user?.Roles?.includes('Admin') 
+          ? api.getProductosBajoStock() // Devuelve Producto[]
+          : Promise.resolve([] as Producto[])
+      ]);
+
+      setStats({
+        totalProductos: productosResponse.Pagination?.TotalCount || 0,
+        totalCategorias: categoriasResponse.length,
+        productosBajoStock: bajoStockResponse.length,
+        loading: false,
+        error: null
+      });
+    } catch (error: any) {
+      console.error('Error loading stats:', error);
+      setStats(prev => ({
+        ...prev,
+        loading: false,
+        error: 'Error al cargar estadísticas'
+      }));
+    }
+  };
 
   // Mostrar loading mientras verifica autenticación
   if (loading) {
@@ -43,11 +97,11 @@ export default function DashboardPage() {
           <div className={styles.userSection}>
             <div className={styles.userInfo}>
               <div className={styles.avatar}>
-                {user?.nombreCompleto?.charAt(0).toUpperCase() || 'U'}
+                {user?.NombreCompleto?.charAt(0).toUpperCase() || 'U'}
               </div>
               <div>
-                <p className={styles.userName}>{user?.nombreCompleto}</p>
-                <p className={styles.userEmail}>{user?.email}</p>
+                <p className={styles.userName}>{user?.NombreCompleto}</p>
+                <p className={styles.userEmail}>{user?.Email}</p>
               </div>
             </div>
             <button onClick={logout} className={styles.logoutButton}>
@@ -61,9 +115,19 @@ export default function DashboardPage() {
       <main className={styles.main}>
         {/* Welcome Card */}
         <div className={styles.welcomeCard}>
-          <h2>¡Bienvenido, {user?.nombreCompleto}! 👋</h2>
+          <h2>¡Bienvenido, {user?.NombreCompleto}! 👋</h2>
           <p>Has iniciado sesión exitosamente en el sistema de gestión.</p>
         </div>
+
+        {/* Mensaje de error si hay */}
+        {stats.error && (
+          <div className={styles.errorMessage}>
+            <p>{stats.error}</p>
+            <button onClick={loadStats} className={styles.retryButton}>
+              Reintentar
+            </button>
+          </div>
+        )}
 
         {/* Stats Grid */}
         <div className={styles.statsGrid}>
@@ -71,7 +135,9 @@ export default function DashboardPage() {
             <div className={styles.statIcon}>📦</div>
             <div>
               <p className={styles.statLabel}>Productos</p>
-              <p className={styles.statValue}>-</p>
+              <p className={styles.statValue}>
+                {stats.loading ? '...' : stats.totalProductos}
+              </p>
             </div>
           </div>
 
@@ -79,7 +145,9 @@ export default function DashboardPage() {
             <div className={styles.statIcon}>📁</div>
             <div>
               <p className={styles.statLabel}>Categorías</p>
-              <p className={styles.statValue}>-</p>
+              <p className={styles.statValue}>
+                {stats.loading ? '...' : stats.totalCategorias}
+              </p>
             </div>
           </div>
 
@@ -87,18 +155,20 @@ export default function DashboardPage() {
             <div className={styles.statIcon}>⚠️</div>
             <div>
               <p className={styles.statLabel}>Bajo Stock</p>
-              <p className={styles.statValue}>-</p>
+              <p className={styles.statValue}>
+                {stats.loading ? '...' : stats.productosBajoStock}
+              </p>
             </div>
           </div>
 
           <div className={styles.statCard}>
             <div className={styles.statIcon}>
-              {user?.roles?.includes('Admin') ? '👑' : '👤'}
+              {user?.Roles?.includes('Admin') ? '👑' : '👤'}
             </div>
             <div>
               <p className={styles.statLabel}>Rol</p>
               <p className={styles.statValue}>
-                {user?.roles?.join(', ') || 'Usuario'}
+                {user?.Roles?.join(', ') || 'Usuario'}
               </p>
             </div>
           </div>
@@ -124,7 +194,7 @@ export default function DashboardPage() {
               <span className={styles.actionLabel}>Ver Categorías</span>
             </button>
 
-            {user?.roles?.includes('Admin') && (
+            {user?.Roles?.includes('Admin') && (
               <>
                 <button 
                   className={styles.actionCard}
@@ -162,6 +232,7 @@ export default function DashboardPage() {
             <ul className={styles.featureList}>
               <li>✅ Autenticación implementada</li>
               <li>✅ Gestión de sesión</li>
+              <li>✅ Estadísticas en tiempo real</li>
               <li>🔄 Gestión de productos (próximamente)</li>
               <li>🔄 Gestión de categorías (próximamente)</li>
               <li>🔄 Perfil de usuario (próximamente)</li>

@@ -8,6 +8,7 @@ using Microsoft.IdentityModel.Tokens;
 using System.Text;
 using Amazon.S3;
 using Amazon.Runtime;
+using System.Text.Json;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -67,6 +68,12 @@ builder.Services.AddScoped<IAuthService, AuthService>();
 builder.Services.AddScoped<ICategoriaService, CategoriaService>();
 builder.Services.AddScoped<IProductoService, ProductoService>();
 builder.Services.AddScoped<IPerfilService, PerfilService>();
+
+builder.Services.AddControllers()
+    .AddJsonOptions(options =>
+    {
+        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+    });
 
 // 6. Configurar CORS para Next.js
 builder.Services.AddCors(options =>

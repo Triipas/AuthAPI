@@ -8,8 +8,8 @@ import styles from '@/styles/Login-Register.module.css';
 export default function LoginPage() {
   const { login } = useAuth();
   const [formData, setFormData] = useState({
-    email: '',
-    password: ''
+    Email: '',
+    Password: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -98,10 +98,10 @@ export default function LoginPage() {
                 <input
                   id="email"
                   type="email"
-                  name="email"
-                  value={formData.email}
+                  name="Email"
+                  value={formData.Email}
                   onChange={handleChange}
-                  placeholder="Ingresa tu email"
+                  placeholder="Ingresa tu Email"
                   className={styles.input}
                   required
                 />
@@ -109,7 +109,7 @@ export default function LoginPage() {
             </div>
 
             <div className={styles.inputGroup}>
-              <label htmlFor="password" className={styles.label}>
+              <label htmlFor="Password" className={styles.label}>
                 Contraseña
               </label>
               <div className={styles.inputWrapper}>
@@ -120,10 +120,10 @@ export default function LoginPage() {
                   </svg>
                 </span>
                 <input
-                  id="password"
-                  type="password"
-                  name="password"
-                  value={formData.password}
+                  id="Password"
+                  type="Password"
+                  name="Password"
+                  value={formData.Password}
                   onChange={handleChange}
                   placeholder="Ingresa tu contraseña"
                   className={styles.input}

@@ -8,10 +8,10 @@ import styles from '@/styles/Login-Register.module.css';
 export default function RegisterPage() {
   const { register } = useAuth();
   const [formData, setFormData] = useState({
-    nombreCompleto: '',
-    email: '',
-    password: '',
-    confirmPassword: ''
+    NombreCompleto: '',
+    Email: '',
+    Password: '',
+    ConfirmPassword: ''
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,13 +21,13 @@ export default function RegisterPage() {
     setError('');
 
     // Validar que las contraseñas coincidan
-    if (formData.password !== formData.confirmPassword) {
+    if (formData.Password !== formData.ConfirmPassword) {
       setError('Las contraseñas no coinciden');
       return;
     }
 
     // Validar longitud de contraseña
-    if (formData.password.length < 6) {
+    if (formData.Password.length < 6) {
       setError('La contraseña debe tener al menos 6 caracteres');
       return;
     }
@@ -36,9 +36,9 @@ export default function RegisterPage() {
 
     try {
       await register({
-        nombreCompleto: formData.nombreCompleto,
-        email: formData.email,
-        password: formData.password
+        NombreCompleto: formData.NombreCompleto,
+        Email: formData.Email,
+        Password: formData.Password
       });
     } catch (err: any) {
       setError(err.message || 'Error al crear la cuenta');
@@ -104,7 +104,7 @@ export default function RegisterPage() {
             )}
 
             <div className={styles.inputGroup}>
-              <label htmlFor="nombreCompleto" className={styles.label}>
+              <label htmlFor="NombreCompleto" className={styles.label}>
                 Nombre Completo
               </label>
               <div className={styles.inputWrapper}>
@@ -115,10 +115,10 @@ export default function RegisterPage() {
                   </svg>
                 </span>
                 <input
-                  id="nombreCompleto"
+                  id="NombreCompleto"
                   type="text"
-                  name="nombreCompleto"
-                  value={formData.nombreCompleto}
+                  name="NombreCompleto"
+                  value={formData.NombreCompleto}
                   onChange={handleChange}
                   placeholder="Ingresa tu nombre completo"
                   className={styles.input}
@@ -128,7 +128,7 @@ export default function RegisterPage() {
             </div>
 
             <div className={styles.inputGroup}>
-              <label htmlFor="email" className={styles.label}>
+              <label htmlFor="Email" className={styles.label}>
                 Email
               </label>
               <div className={styles.inputWrapper}>
@@ -139,12 +139,12 @@ export default function RegisterPage() {
                   </svg>
                 </span>
                 <input
-                  id="email"
-                  type="email"
-                  name="email"
-                  value={formData.email}
+                  id="Email"
+                  type="Email"
+                  name="Email"
+                  value={formData.Email}
                   onChange={handleChange}
-                  placeholder="tu@email.com"
+                  placeholder="tu@Email.com"
                   className={styles.input}
                   required
                 />
@@ -152,7 +152,7 @@ export default function RegisterPage() {
             </div>
 
             <div className={styles.inputGroup}>
-              <label htmlFor="password" className={styles.label}>
+              <label htmlFor="Password" className={styles.label}>
                 Contraseña
               </label>
               <div className={styles.inputWrapper}>
@@ -163,10 +163,10 @@ export default function RegisterPage() {
                   </svg>
                 </span>
                 <input
-                  id="password"
-                  type="password"
-                  name="password"
-                  value={formData.password}
+                  id="Password"
+                  type="Password"
+                  name="Password"
+                  value={formData.Password}
                   onChange={handleChange}
                   placeholder="Mínimo 6 caracteres"
                   className={styles.input}
@@ -177,7 +177,7 @@ export default function RegisterPage() {
             </div>
 
             <div className={styles.inputGroup}>
-              <label htmlFor="confirmPassword" className={styles.label}>
+              <label htmlFor="ConfirmPassword" className={styles.label}>
                 Confirmar Contraseña
               </label>
               <div className={styles.inputWrapper}>
@@ -188,10 +188,10 @@ export default function RegisterPage() {
                   </svg>
                 </span>
                 <input
-                  id="confirmPassword"
-                  type="password"
-                  name="confirmPassword"
-                  value={formData.confirmPassword}
+                  id="ConfirmPassword"
+                  type="Password"
+                  name="ConfirmPassword"
+                  value={formData.ConfirmPassword}
                   onChange={handleChange}
                   placeholder="Repite tu contraseña"
                   className={styles.input}

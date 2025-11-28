@@ -13,20 +13,20 @@ export function proxy(request: NextRequest) {
     const isExcludedRoute = excludedRoutes.some(route => pathname.startsWith(route));
     
     if (isExcludedRoute) {
-        return NextResponse.next(); // Dejar pasar sin verificar token
+        return NextResponse.next(); // Dejar pasar sin verificar Token
     }
 
-    //Verificar si hay token (cookie)
-    const token = request.cookies.get('token')?.value;
+    //Verificar si hay Token (cookie)
+    const Token = request.cookies.get('Token')?.value;
     
-    // Si NO hay token y la ruta NO es pública → Redirigir a login
-    if (!token && !isPublicRoute) {
-        console.log(`[Proxy] No token found, redirecting ${pathname} → /login`);
+    // Si NO hay Token y la ruta NO es pública → Redirigir a login
+    if (!Token && !isPublicRoute) {
+        console.log(`[Proxy] No Token found, redirecting ${pathname} → /login`);
         return NextResponse.redirect(new URL('/login', request.url));
     }
 
-    // Si SÍ hay token y está intentando acceder a login/register → Redirigir a dashboard
-    if (token && isPublicRoute) {
+    // Si SÍ hay Token y está intentando acceder a login/register → Redirigir a dashboard
+    if (Token && isPublicRoute) {
         console.log(`[Proxy] Token exists, redirecting ${pathname} → /dashboard`);
         return NextResponse.redirect(new URL('/dashboard', request.url));
     }
