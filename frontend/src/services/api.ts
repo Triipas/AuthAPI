@@ -1,4 +1,5 @@
 import { LoginDTO, RegisterDTO, AuthResponse, ApiError } from '@/types';
+import { cookies } from '@/utils/cookies';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:5000/api';
 
@@ -20,6 +21,11 @@ class ApiService {
 
   private getToken(): string | null {
     if (typeof window !== 'undefined') {
+      // Primero intentar de cookie (más seguro)
+      const tokenFromCookie = cookies.get('token');
+      if (tokenFromCookie) return tokenFromCookie;
+      
+      // Fallback a localStorage (por compatibilidad)
       return localStorage.getItem('token');
     }
     return null;
@@ -51,9 +57,15 @@ class ApiService {
 
     const result = await this.handleResponse<AuthResponse>(response);
     
-    // Guardar token
+    // Guardar token en COOKIE (para middleware) y localStorage (backup)
     if (result.token) {
+      // Cookie (expira en 1 día, igual que el token JWT)
+      cookies.set('token', result.token, 1);
+      
+      // LocalStorage (backup para código legacy)
       localStorage.setItem('token', result.token);
+      
+      // Guardar info del usuario solo en localStorage (no sensible)
       localStorage.setItem('user', JSON.stringify({
         email: result.email,
         nombreCompleto: result.nombreCompleto,
@@ -73,9 +85,15 @@ class ApiService {
 
     const result = await this.handleResponse<AuthResponse>(response);
     
-    // Guardar token
+    // Guardar token en COOKIE y localStorage
     if (result.token) {
+      // Cookie (expira en 1 día)
+      cookies.set('token', result.token, 1);
+      
+      // LocalStorage (backup)
       localStorage.setItem('token', result.token);
+      
+      // Info del usuario
       localStorage.setItem('user', JSON.stringify({
         email: result.email,
         nombreCompleto: result.nombreCompleto,
@@ -88,6 +106,10 @@ class ApiService {
 
   logout() {
     if (typeof window !== 'undefined') {
+      // Eliminar cookie
+      cookies.remove('token');
+      
+      // Eliminar localStorage
       localStorage.removeItem('token');
       localStorage.removeItem('user');
     }
@@ -105,7 +127,7 @@ class ApiService {
     return null;
   }
 
-  // Productos endpoints (ejemplo para futuro uso)
+  // Productos endpoints
   async getProductos(params?: any) {
     const queryString = params ? `?${new URLSearchParams(params)}` : '';
     const response = await fetch(`${API_URL}/Productos${queryString}`, {
@@ -114,7 +136,7 @@ class ApiService {
     return this.handleResponse(response);
   }
 
-  // Categorías endpoints (ejemplo para futuro uso)
+  // Categorías endpoints
   async getCategorias() {
     const response = await fetch(`${API_URL}/Categorias`, {
       headers: this.getHeaders(true),
