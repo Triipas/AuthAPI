@@ -40,23 +40,19 @@ class ApiService {
       // Primero intentar de cookie
       const tokenFromCookie = cookies.get('token');
       if (tokenFromCookie) {
-        console.log('[API] Token found in cookie');
         return tokenFromCookie;
       }
 
       // Fallback a localStorage
       const tokenFromStorage = localStorage.getItem('token');
       if (tokenFromStorage) {
-        console.log('[API] Token found in localStorage');
         return tokenFromStorage;
       }
-      
-      console.log('[API] No token found');
     }
     return null;
   }
 
-  async handleResponse<T>(response: Response): Promise<T> {
+  private async handleResponse<T>(response: Response): Promise<T> {
     if (!response.ok) {
       let errorMessage = 'Error en la petición';
       let errorDetails = null;
@@ -64,15 +60,15 @@ class ApiService {
       try {
         const errorData = await response.json();
 
-        if (errorData.message) {
-          errorMessage = errorData.message;
-        } else if (errorData.title) {
-          errorMessage = errorData.title;
+        if (errorData.Message) {
+          errorMessage = errorData.Message;
+        } else if (errorData.Title) {
+          errorMessage = errorData.Title;
         }
 
-        if (errorData.errors) {
-          errorDetails = errorData.errors;
-          console.error('Validation errors:', errorData.errors);
+        if (errorData.Errors) {
+          errorDetails = errorData.Errors;
+          console.error('Validation errors:', errorDetails);
         }
 
         console.error('API Error:', {
@@ -84,7 +80,6 @@ class ApiService {
 
       } catch (parseError) {
         errorMessage = `${response.status}: ${response.statusText}`;
-        console.error('Could not parse error response:', parseError);
       }
 
       const error: ApiError = {
@@ -107,8 +102,6 @@ class ApiService {
   // ============================================
   
   async login(data: LoginDTO): Promise<AuthResponse> {
-    console.log('[API] 🔐 Attempting login for:', data.Email);
-    
     const response = await fetch(`${API_URL}/Auth/login`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -116,47 +109,25 @@ class ApiService {
     });
 
     const result = await this.handleResponse<AuthResponse>(response);
-    console.log('[API] ✅ Login response received:', {
-      email: result.Email,
-      roles: result.Roles,
-      hasToken: !!result.Token,
-      tokenPreview: result.Token ? result.Token.substring(0, 20) + '...' : 'NO TOKEN'
-    });
 
     if (result.Token) {
-      console.log('[API] 💾 Saving token to cookie and localStorage...');
-      
-      // 1. Cookie (principal)
+      // Guardar token en cookie y localStorage
       cookies.set('token', result.Token, 1);
-      console.log('[API] ✅ Token saved to cookie');
-      
-      // 2. LocalStorage (backup)
       localStorage.setItem('token', result.Token);
-      console.log('[API] ✅ Token saved to localStorage');
       
-      // 3. User info
+      // Guardar info del usuario
       const userInfo = {
-        email: result.Email,
-        nombreCompleto: result.NombreCompleto,
-        roles: result.Roles
+        Email: result.Email,
+        NombreCompleto: result.NombreCompleto,
+        Roles: result.Roles
       };
       localStorage.setItem('user', JSON.stringify(userInfo));
-      console.log('[API] ✅ User info saved:', userInfo);
-      
-      // 4. Verificar que se guardó correctamente
-      const verification = cookies.get('token');
-      console.log('[API] 🔍 Verification - Cookie exists:', !!verification);
-      
-    } else {
-      console.error('[API] ❌ No token in response!');
     }
 
     return result;
   }
 
   async register(data: RegisterDTO): Promise<AuthResponse> {
-    console.log('[API] 🔐 Attempting registration for:', data.Email);
-    
     const response = await fetch(`${API_URL}/Auth/register`, {
       method: 'POST',
       headers: this.getHeaders(),
@@ -164,58 +135,32 @@ class ApiService {
     });
 
     const result = await this.handleResponse<AuthResponse>(response);
-    console.log('[API] ✅ Registration response received:', {
-      email: result.Email,
-      roles: result.Roles,
-      hasToken: !!result.Token
-    });
 
     if (result.Token) {
-      console.log('[API] 💾 Saving token to cookie and localStorage...');
-      
-      // Cookie
       cookies.set('token', result.Token, 1);
-      console.log('[API] ✅ Token saved to cookie');
-      
-      // LocalStorage
       localStorage.setItem('token', result.Token);
-      console.log('[API] ✅ Token saved to localStorage');
       
-      // User info
       const userInfo = {
-        email: result.Email,
-        nombreCompleto: result.NombreCompleto,
-        roles: result.Roles
+        Email: result.Email,
+        NombreCompleto: result.NombreCompleto,
+        Roles: result.Roles
       };
       localStorage.setItem('user', JSON.stringify(userInfo));
-      console.log('[API] ✅ User info saved');
-      
-      // Verificación
-      const verification = cookies.get('token');
-      console.log('[API] 🔍 Verification - Cookie exists:', !!verification);
-    } else {
-      console.error('[API] ❌ No token in response!');
     }
 
     return result;
   }
 
   logout() {
-    console.log('[API] 🚪 Logging out...');
-    
     if (typeof window !== 'undefined') {
       cookies.remove('token');
       localStorage.removeItem('token');
       localStorage.removeItem('user');
-      
-      console.log('[API] ✅ Logout complete');
     }
   }
 
   isAuthenticated(): boolean {
-    const hasToken = !!this.getToken();
-    console.log('[API] 🔍 Is authenticated:', hasToken);
-    return hasToken;
+    return !!this.getToken();
   }
 
   getCurrentUser() {
@@ -268,10 +213,26 @@ class ApiService {
   }
 
   async actualizarPerfil(data: ActualizarPerfilDTO): Promise<PerfilResponseDTO> {
+    // Helper para convertir strings vacíos a undefined (se omiten en JSON)
+    const emptyToUndefined = (value: string | undefined | null): string | undefined => {
+      if (value === undefined || value === null || value.trim() === '') {
+        return undefined;
+      }
+      return value;
+    };
+
+    // Construir body limpiando strings vacíos
+    const body: ActualizarPerfilDTO = {
+      NombreCompleto: emptyToUndefined(data.NombreCompleto),
+      Bio: emptyToUndefined(data.Bio),
+      FechaNacimiento: emptyToUndefined(data.FechaNacimiento),
+      Avatar: emptyToUndefined(data.Avatar)
+    };
+    
     const response = await fetch(`${API_URL}/Perfil`, {
       method: 'PUT',
       headers: this.getHeaders(true),
-      body: JSON.stringify(data),
+      body: JSON.stringify(body),
     });
     return this.handleResponse<PerfilResponseDTO>(response);
   }
@@ -321,7 +282,7 @@ class ApiService {
     return this.handleResponse<void>(response);
   }
 
-  async subirFotoPerfil(archivo: File): Promise<{ url: string }> {
+  async subirFotoPerfil(archivo: File): Promise<{ Url: string }> {
     const formData = new FormData();
     formData.append('archivo', archivo);
 
@@ -332,7 +293,7 @@ class ApiService {
       },
       body: formData,
     });
-    return this.handleResponse<{ url: string }>(response);
+    return this.handleResponse<{ Url: string }>(response);
   }
 
   async eliminarFotoPerfil(): Promise<void> {
@@ -352,13 +313,13 @@ class ApiService {
     return this.handleResponse<void>(response);
   }
 
-  async solicitarRestablecerPassword(email: string): Promise<{ message: string; Token?: string }> {
+  async solicitarRestablecerPassword(email: string): Promise<{ Message: string; Token?: string }> {
     const response = await fetch(`${API_URL}/Perfil/restablecer-password-request`, {
       method: 'POST',
       headers: this.getHeaders(false),
       body: JSON.stringify({ Email: email }),
     });
-    return this.handleResponse<{ message: string; Token?: string }>(response);
+    return this.handleResponse<{ Message: string; Token?: string }>(response);
   }
 
   async restablecerPassword(data: { Email: string; Token: string; NuevaPassword: string }): Promise<void> {

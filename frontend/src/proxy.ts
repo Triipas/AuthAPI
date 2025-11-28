@@ -18,18 +18,6 @@ export function proxy(request: NextRequest) {
 
     // 🔑 Leer el token de la cookie
     const token = request.cookies.get('token')?.value;
-    
-    // Debug: ver todas las cookies
-    const allCookies = request.cookies.getAll();
-    console.log('[Middleware] 🍪 Path:', pathname);
-    console.log('[Middleware] 🍪 All cookies:', allCookies.map(c => c.name).join(', '));
-    console.log('[Middleware] 🔑 Token exists:', !!token);
-    
-    if (token) {
-        console.log('[Middleware] ✅ Token found (length:', token.length, ')');
-    } else {
-        console.log('[Middleware] ❌ No token found');
-    }
 
     // Si NO hay token y la ruta NO es pública → Redirigir a login
     if (!token && !isPublicRoute) {
@@ -43,7 +31,6 @@ export function proxy(request: NextRequest) {
         return NextResponse.redirect(new URL('/dashboard', request.url));
     }
 
-    console.log('[Middleware] ✅ Allowed:', pathname);
     return NextResponse.next();
 }
 

@@ -230,19 +230,19 @@ export default function PerfilPage() {
           className={`${styles.tab} ${activeTab === 'personal' ? styles.activeTab : ''}`}
           onClick={() => setActiveTab('personal')}
         >
-          👤 Información Personal
+          Información Personal
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'apariencia' ? styles.activeTab : ''}`}
           onClick={() => setActiveTab('apariencia')}
         >
-          🎨 Apariencia
+          Apariencia
         </button>
         <button
           className={`${styles.tab} ${activeTab === 'seguridad' ? styles.activeTab : ''}`}
           onClick={() => setActiveTab('seguridad')}
         >
-          🔒 Seguridad
+          Seguridad
         </button>
       </div>
 
@@ -286,7 +286,7 @@ export default function PerfilPage() {
                     className={styles.uploadButton}
                     disabled={uploadingPhoto}
                   >
-                    📷 {photoPreview ? 'Cambiar Foto' : 'Subir Foto'}
+                    {photoPreview ? 'Cambiar Foto' : 'Subir Foto'}
                   </button>
 
                   {photoPreview && (
@@ -295,7 +295,7 @@ export default function PerfilPage() {
                       className={styles.deleteButton}
                       disabled={uploadingPhoto}
                     >
-                      🗑️ Eliminar
+                      Eliminar
                     </button>
                   )}
 
@@ -378,7 +378,7 @@ export default function PerfilPage() {
                     placeholder="https://..."
                   />
                   <small className={styles.hint}>
-                    Emoji o URL de una imagen de Avatar
+                    URL de una imagen de Avatar
                   </small>
                 </div>
 
@@ -425,19 +425,19 @@ export default function PerfilPage() {
                     className={`${styles.themeButton} ${config.Tema === 'light' ? styles.active : ''}`}
                     onClick={() => handleTemaChange('light')}
                   >
-                    ☀️ Claro
+                    Claro
                   </button>
                   <button
                     className={`${styles.themeButton} ${config.Tema === 'dark' ? styles.active : ''}`}
                     onClick={() => handleTemaChange('dark')}
                   >
-                    🌙 Oscuro
+                    Oscuro
                   </button>
                   <button
                     className={`${styles.themeButton} ${config.Tema === 'auto' ? styles.active : ''}`}
                     onClick={() => handleTemaChange('auto')}
                   >
-                    ⚙️ Auto
+                    Auto
                   </button>
                 </div>
               </div>

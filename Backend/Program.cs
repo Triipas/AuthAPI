@@ -72,7 +72,7 @@ builder.Services.AddScoped<IPerfilService, PerfilService>();
 builder.Services.AddControllers()
     .AddJsonOptions(options =>
     {
-        options.JsonSerializerOptions.PropertyNamingPolicy = JsonNamingPolicy.CamelCase;
+        options.JsonSerializerOptions.PropertyNamingPolicy = null;
     });
 
 // 6. Configurar CORS para Next.js
