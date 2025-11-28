@@ -3,7 +3,16 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
 import { useRouter } from 'next/navigation';
 import { api } from '@/services/api';
-import { LoginDTO, RegisterDTO, Usuario } from '@/types';
+import { LoginDTO, RegisterDTO } from '@/types';
+
+// Tipo de usuario con foto de perfil
+interface Usuario {
+  Id?: string;
+  Email: string;
+  NombreCompleto: string;
+  Roles: string[];
+  FotoPerfil?: string | null;
+}
 
 interface AuthContextType {
   user: Usuario | null;
@@ -13,6 +22,8 @@ interface AuthContextType {
   logout: () => void;
   isAuthenticated: boolean;
   isAdmin: boolean;
+  updateUserPhoto: (photoUrl: string | null) => void;  // Para actualizar foto sin recargar
+  refreshUserProfile: () => Promise<void>;  // Para recargar perfil completo
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,26 +38,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     const savedUser = api.getCurrentUser();
     if (savedUser) {
       setUser(savedUser);
+      // Cargar perfil para obtener foto actualizada
+      loadUserProfile();
     }
     setLoading(false);
   }, []);
+
+  // Cargar perfil completo del usuario (incluyendo foto)
+  const loadUserProfile = async () => {
+    try {
+      if (!api.isAuthenticated()) return;
+      
+      const perfil = await api.obtenerPerfil();
+      
+      setUser(prev => {
+        if (!prev) return null;
+        
+        const updatedUser = {
+          ...prev,
+          Id: perfil.Id,
+          FotoPerfil: perfil.FotoPerfil || null,
+          NombreCompleto: perfil.NombreCompleto || prev.NombreCompleto
+        };
+        
+        // Actualizar también en localStorage
+        localStorage.setItem('user', JSON.stringify(updatedUser));
+        
+        return updatedUser;
+      });
+    } catch (error) {
+      console.error('Error loading user profile:', error);
+    }
+  };
 
   const login = async (data: LoginDTO) => {
     try {
       const response = await api.login(data);
       const userData: Usuario = {
-        Id: '',
         Email: response.Email,
         NombreCompleto: response.NombreCompleto,
         Roles: response.Roles
       };
       setUser(userData);
       
-      // 🔑 CRÍTICO: Esperar 100ms para que la cookie se establezca
+      // Esperar un poco para que la cookie se establezca
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // 🔑 Usar window.location.href para forzar reload completo
-      // Esto asegura que el middleware vea la cookie
+      // Cargar perfil para obtener foto
+      try {
+        const perfil = await api.obtenerPerfil();
+        const userWithPhoto: Usuario = {
+          ...userData,
+          Id: perfil.Id,
+          FotoPerfil: perfil.FotoPerfil || null
+        };
+        setUser(userWithPhoto);
+        localStorage.setItem('user', JSON.stringify(userWithPhoto));
+      } catch (e) {
+        console.error('Could not load profile photo:', e);
+      }
+      
+      // Redirigir
       window.location.href = '/dashboard';
       
     } catch (error) {
@@ -58,17 +110,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     try {
       const response = await api.register(data);
       const userData: Usuario = {
-        Id: '',
         Email: response.Email,
         NombreCompleto: response.NombreCompleto,
-        Roles: response.Roles
+        Roles: response.Roles,
+        FotoPerfil: null  // Usuario nuevo no tiene foto
       };
       setUser(userData);
       
-      // 🔑 CRÍTICO: Esperar 100ms para que la cookie se establezca
       await new Promise(resolve => setTimeout(resolve, 100));
       
-      // 🔑 Usar window.location.href para forzar reload completo
       window.location.href = '/dashboard';
       
     } catch (error) {
@@ -79,9 +129,23 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const logout = () => {
     api.logout();
     setUser(null);
-    
-    // También usar reload completo para logout
     window.location.href = '/login';
+  };
+
+  // Actualizar solo la foto del usuario (útil después de subir foto en perfil)
+  const updateUserPhoto = (photoUrl: string | null) => {
+    setUser(prev => {
+      if (!prev) return null;
+      
+      const updatedUser = { ...prev, FotoPerfil: photoUrl };
+      localStorage.setItem('user', JSON.stringify(updatedUser));
+      return updatedUser;
+    });
+  };
+
+  // Recargar perfil completo
+  const refreshUserProfile = async () => {
+    await loadUserProfile();
   };
 
   const value = {
@@ -92,6 +156,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     logout,
     isAuthenticated: !!user,
     isAdmin: user?.Roles?.includes('Admin') ?? false,
+    updateUserPhoto,
+    refreshUserProfile
   };
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;

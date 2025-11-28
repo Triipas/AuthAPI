@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { useEffect, useState } from 'react';
 import { api } from '@/services/api';
 import { Producto, Categoria, PaginatedResponse } from '@/types';
+import Avatar from '@/components/Avatar';  // ← Importar Avatar
 import styles from '@/styles/dashboard.module.css';
 
 interface DashboardStats {
@@ -27,14 +28,12 @@ export default function DashboardPage() {
   });
 
   useEffect(() => {
-    // Si no está autenticado después de cargar, redirigir a login
     if (!loading && !isAuthenticated) {
       router.push('/login');
     }
   }, [isAuthenticated, loading, router]);
 
   useEffect(() => {
-    // Cargar estadísticas solo si está autenticado
     if (isAuthenticated) {
       loadStats();
     }
@@ -44,12 +43,11 @@ export default function DashboardPage() {
     try {
       setStats(prev => ({ ...prev, loading: true, error: null }));
 
-      // Llamadas paralelas para obtener todos los datos (ahora con tipado correcto)
       const [productosResponse, categoriasResponse, bajoStockResponse] = await Promise.all([
-        api.getProductos({ pageSize: 1 }), // Devuelve PaginatedResponse<Producto>
-        api.getCategorias(), // Devuelve Categoria[]
+        api.getProductos({ pageSize: 1 }),
+        api.getCategorias(),
         user?.Roles?.includes('Admin') 
-          ? api.getProductosBajoStock() // Devuelve Producto[]
+          ? api.getProductosBajoStock()
           : Promise.resolve([] as Producto[])
       ]);
 
@@ -70,7 +68,6 @@ export default function DashboardPage() {
     }
   };
 
-  // Mostrar loading mientras verifica autenticación
   if (loading) {
     return (
       <div className={styles.loadingContainer}>
@@ -80,7 +77,6 @@ export default function DashboardPage() {
     );
   }
 
-  // Si no está autenticado, no mostrar nada (el useEffect redirigirá)
   if (!isAuthenticated) {
     return null;
   }
@@ -96,9 +92,12 @@ export default function DashboardPage() {
           </div>
           <div className={styles.userSection}>
             <div className={styles.userInfo}>
-              <div className={styles.avatar}>
-                {user?.NombreCompleto?.charAt(0).toUpperCase() || 'U'}
-              </div>
+              <Avatar 
+                src={user?.FotoPerfil}
+                name={user?.NombreCompleto}
+                size="md"
+                onClick={() => router.push('/perfil')}
+              />
               <div>
                 <p className={styles.userName}>{user?.NombreCompleto}</p>
                 <p className={styles.userEmail}>{user?.Email}</p>
