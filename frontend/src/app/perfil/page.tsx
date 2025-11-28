@@ -16,7 +16,7 @@ export default function PerfilPage() {
   const { config, updateConfig } = useTheme();
   const router = useRouter();
   const fileInputRef = useRef<HTMLInputElement>(null);
-  
+
   const [activeTab, setActiveTab] = useState<TabType>('personal');
   const [perfil, setPerfil] = useState<PerfilResponseDTO | null>(null);
   const [loading, setLoading] = useState(true);
@@ -51,7 +51,7 @@ export default function PerfilPage() {
     try {
       const data = await api.obtenerPerfil();
       setPerfil(data);
-      
+
       // Inicializar formulario con datos existentes
       setFormData({
         NombreCompleto: data.NombreCompleto || '',
@@ -59,7 +59,7 @@ export default function PerfilPage() {
         FechaNacimiento: data.FechaNacimiento ? data.FechaNacimiento.split('T')[0] : '',
         Avatar: data.Avatar || '',
       });
-      
+
       setPhotoPreview(data.FotoPerfil || null);
     } catch (error) {
       console.error('Error loading profile:', error);
@@ -88,7 +88,7 @@ export default function PerfilPage() {
   const handleGuardarInformacion = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
-    
+
     try {
       console.log('📤 Enviando datos:', formData);
       const updated = await api.actualizarPerfil(formData);
@@ -137,7 +137,7 @@ export default function PerfilPage() {
 
   const subirFoto = async (file: File) => {
     setUploadingPhoto(true);
-    
+
     try {
       const result = await api.subirFotoPerfil(file);
       showMessage('success', 'Foto de perfil actualizada');
@@ -154,7 +154,7 @@ export default function PerfilPage() {
     if (!confirm('¿Estás seguro de eliminar tu foto de perfil?')) return;
 
     setUploadingPhoto(true);
-    
+
     try {
       await api.eliminarFotoPerfil();
       setPhotoPreview(null);
@@ -187,7 +187,7 @@ export default function PerfilPage() {
     setSaving(false);
   };
 
-  const handleFuenteChange = async (TipoFuente: 'system' | 'serif' | 'mono') => {
+  const handleFuenteChange = async (TipoFuente: 'system' | 'serif' | 'mono' | 'poppins' | 'roboto' | 'inter') => {
     setSaving(true);
     await updateConfig({ TipoFuente });
     setSaving(false);
@@ -255,7 +255,7 @@ export default function PerfilPage() {
             {/* Foto de perfil */}
             <section className={styles.section}>
               <h2>Foto de Perfil</h2>
-              
+
               <div className={styles.photoSection}>
                 <div className={styles.photoPreview}>
                   {photoPreview ? (
@@ -280,7 +280,7 @@ export default function PerfilPage() {
                     onChange={handleFileSelect}
                     style={{ display: 'none' }}
                   />
-                  
+
                   <button
                     onClick={() => fileInputRef.current?.click()}
                     className={styles.uploadButton}
@@ -309,7 +309,7 @@ export default function PerfilPage() {
             {/* Información básica */}
             <section className={styles.section}>
               <h2>Información Básica</h2>
-              
+
               <form onSubmit={handleGuardarInformacion} className={styles.form}>
                 <div className={styles.formGroup}>
                   <label htmlFor="NombreCompleto">Nombre Completo</label>
@@ -416,7 +416,7 @@ export default function PerfilPage() {
           <>
             <section className={styles.section}>
               <h2>🎨 Apariencia</h2>
-              
+
               {/* Selector de tema */}
               <div className={styles.formGroup}>
                 <label>Tema</label>
@@ -492,6 +492,28 @@ export default function PerfilPage() {
                   >
                     Mono
                   </button>
+                  {/* NUEVAS FUENTES */}
+                  <button
+                    className={`${styles.fontButton} ${config.TipoFuente === 'poppins' ? styles.active : ''}`}
+                    onClick={() => handleFuenteChange('poppins')}
+                    style={{ fontFamily: 'Poppins, sans-serif' }}
+                  >
+                    Poppins
+                  </button>
+                  <button
+                    className={`${styles.fontButton} ${config.TipoFuente === 'roboto' ? styles.active : ''}`}
+                    onClick={() => handleFuenteChange('roboto')}
+                    style={{ fontFamily: 'Roboto, sans-serif' }}
+                  >
+                    Roboto
+                  </button>
+                  <button
+                    className={`${styles.fontButton} ${config.TipoFuente === 'inter' ? styles.active : ''}`}
+                    onClick={() => handleFuenteChange('inter')}
+                    style={{ fontFamily: 'Inter, sans-serif' }}
+                  >
+                    Inter
+                  </button>
                 </div>
               </div>
 
@@ -519,11 +541,11 @@ export default function PerfilPage() {
               <div className={styles.preview}>
                 <h3 style={{ color: config.ColorPrimario }}>Título con color primario</h3>
                 <p>Este es un párrafo de ejemplo con el tamaño de fuente configurado.</p>
-                <button 
+                <button
                   className={styles.previewButton}
-                  style={{ 
+                  style={{
                     backgroundColor: config.ColorPrimario,
-                    borderColor: config.ColorSecundario 
+                    borderColor: config.ColorSecundario
                   }}
                 >
                   Botón de ejemplo
@@ -542,7 +564,7 @@ export default function PerfilPage() {
             <p className={styles.securityNote}>
               La funcionalidad de cambio de contraseña estará disponible próximamente.
             </p>
-            
+
             <div className={styles.infoGrid}>
               {perfil.Seguridad.UltimaActualizacionPassword && (
                 <div className={styles.infoItem}>

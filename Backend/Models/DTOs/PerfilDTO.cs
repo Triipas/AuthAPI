@@ -52,7 +52,7 @@ namespace AuthAPI.Models.DTOs
         [RegularExpression("^#([A-Fa-f0-9]{6}|[A-Fa-f0-9]{3})$")]
         public string ColorSecundario { get; set; } = "#8b5cf6";
         
-        [RegularExpression("^(system|serif|mono)$")]
+        [RegularExpression("^(system|serif|mono|poppins|roboto|inter)$")]
         public string TipoFuente { get; set; } = "system";
         
         [Range(12, 24)]

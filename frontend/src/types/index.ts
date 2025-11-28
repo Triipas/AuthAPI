@@ -63,7 +63,7 @@ export interface ConfiguracionAparienciaDTO {
   Tema: 'light' | 'dark' | 'auto';
   ColorPrimario: string;
   ColorSecundario: string;
-  TipoFuente: 'system' | 'serif' | 'mono';
+  TipoFuente: 'system' | 'serif' | 'mono' | 'poppins' | 'roboto' | 'inter';
   TamanoFuente: number;
   ModoContraste: 'normal' | 'high' | 'low';
 }
